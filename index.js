@@ -3,6 +3,8 @@ const express = require('express')
 
 const PORT = process.env.PORT || 3000
 
+const VERBOSE = true
+
 const app = express()
 app.use(bodyParser.json())
 
@@ -17,7 +19,7 @@ app.listen(PORT, () => console.log(`Battlesnake Server listening at http://127.0
 function handleIndex(request, response) {
   var battlesnakeInfo = {
     apiversion: '1',
-    author: '',
+    author: 'brandosha',
     color: '#0345fc',
     head: 'sand-worm',
     tail: 'bolt'
@@ -34,15 +36,36 @@ function handleStart(request, response) {
 
 function handleMove(request, response) {
   /** @type { BattleSnake.GameData } */
-  var gameData = request.body
+  const gameData = request.body
 
-  var possibleMoves = ['up', 'down', 'left', 'right']
+  /** @type { ['up', 'down', 'left', 'right'] } */
+  const possibleMoves = ['up', 'down', 'left', 'right']
   const moveVecs = {
     up: { x: 0, y: 1 },
     down: { x: 0, y: -1 },
     left: { x: -1, y: 0 },
     right: { x: 1, y: 0 }
   }
+
+  const posStr = (pos) => [pos.x, pos.y].join(',')
+
+  const badPoints = {}
+  gameData.board.snakes.forEach(snake => {
+    snake.body.slice(0, -1).forEach(pos => {
+      badPoints[posStr(pos)] = true
+    })
+
+    if (snake.id == gameData.you.id) return
+
+    possibleMoves.forEach(move => {
+      const newHeadPos = {
+        x: snake.head.x + moveVecs[move].x,
+        y: snake.head.y + moveVecs[move].y
+      }
+
+      badPoints[posStr(newHeadPos)] = true
+    })
+  })
 
   var okMoves = possibleMoves.filter(move => {
     const moveVec = moveVecs[move]
@@ -51,14 +74,27 @@ function handleMove(request, response) {
       y: gameData.you.head.y + moveVec.y
     }
 
-    return gameData.board.snakes.every(snake => {
-      return snake.body.every(point => {
-        return point.x != newPos.x && point.y != newPos.y
-      })
-    })
+    if (newPos.x >= gameData.board.width || newPos.x < 0) {
+      if (VERBOSE) console.log("can't move", move, 'outside board')
+      return false
+    }
+    if (newPos.y >= gameData.board.width || newPos.y < 0) {
+      if (VERBOSE) console.log("can't move", move, 'outside board')
+      return false
+    }
+
+    if (badPoints[posStr(newPos)] == true) {
+      if (VERBOSE) console.log("can't move", move, 'spot occupied')
+      return false
+    }
+
+    return true
   })
 
-  var move = okMoves[Math.floor(Math.random() * okMoves.length)]
+  if (VERBOSE) console.log('selecting move from', okMoves)
+
+  const randFrom = (array) => array[Math.floor(Math.random() * array.length)]
+  const move = randFrom(okMoves) || randFrom(possibleMoves)
 
   console.log('MOVE: ' + move)
   response.status(200).send({
