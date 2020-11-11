@@ -18,9 +18,9 @@ function handleIndex(request, response) {
   var battlesnakeInfo = {
     apiversion: '1',
     author: '',
-    color: '#888888',
-    head: 'default',
-    tail: 'default'
+    color: '#0345fc',
+    head: 'sand-worm',
+    tail: 'bolt'
   }
   response.status(200).json(battlesnakeInfo)
 }
@@ -33,10 +33,32 @@ function handleStart(request, response) {
 }
 
 function handleMove(request, response) {
+  /** @type { BattleSnake.GameData } */
   var gameData = request.body
 
   var possibleMoves = ['up', 'down', 'left', 'right']
-  var move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]
+  const moveVecs = {
+    up: { x: 0, y: 1 },
+    down: { x: 0, y: -1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 }
+  }
+
+  var okMoves = possibleMoves.filter(move => {
+    const moveVec = moveVecs[move]
+    const newPos = {
+      x: gameData.you.head.x + moveVec.x,
+      y: gameData.you.head.y + moveVec.y
+    }
+
+    return gameData.board.snakes.every(snake => {
+      return snake.body.every(point => {
+        return point.x != newPos.x && point.y != newPos.y
+      })
+    })
+  })
+
+  var move = okMoves[Math.floor(Math.random() * okMoves.length)]
 
   console.log('MOVE: ' + move)
   response.status(200).send({
