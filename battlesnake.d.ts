@@ -10,7 +10,7 @@ export interface Board {
   width:   number;
   snakes:  Snake[];
   food:    Point[];
-  hazards: any[];
+  hazards: Point[];
 }
 
 export interface Point {

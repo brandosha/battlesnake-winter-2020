@@ -1,122 +1,184 @@
 {
-  "game": {
-    "id": "f35f5dd2-67e4-41d2-9058-35cc57c8a3e6",
-    "ruleset": {
-      "name": "standard",
-      "version": "v1.0.14"
-    },
-    "timeout": 500
-  },
-  "turn": 4,
-  "board": {
-    "height": 11,
-    "width": 11,
-    "snakes": [
-      {
-        "id": "gs_rXvMmRjHX3mRR7HWkDxr7mdQ",
-        "name": "Ophiophagus One",
-        "latency": "71",
-        "health": 96,
-        "body": [
-          {
-            "x": 8,
-            "y": 8
-          },
-          {
-            "x": 8,
-            "y": 9
-          },
-          {
-            "x": 8,
-            "y": 10
-          }
-        ],
-        "head": {
-          "x": 8,
-          "y": 8
-        },
-        "length": 3,
-        "shout": ""
-      },
-      {
-        "id": "gs_Y3X3kqTwgMYXXQy7f7wkTQCR",
-        "name": "Ophiophagus One",
-        "latency": "77",
-        "health": 96,
-        "body": [
-          {
-            "x": 6,
-            "y": 8
-          },
-          {
-            "x": 6,
-            "y": 7
-          },
-          {
-            "x": 5,
-            "y": 7
-          }
-        ],
-        "head": {
-          "x": 6,
-          "y": 8
-        },
-        "length": 3,
-        "shout": ""
-      }
-    ],
-    "food": [
-      {
-        "x": 10,
-        "y": 8
-      },
-      {
-        "x": 4,
-        "y": 10
-      },
-      {
-        "x": 5,
-        "y": 5
-      },
-      {
-        "x": 10,
-        "y": 7
-      },
-      {
-        "x": 2,
-        "y": 5
-      },
-      {
-        "x": 2,
-        "y": 8
-      }
-    ],
-    "hazards": []
-  },
-  "you": {
-    "id": "gs_rXvMmRjHX3mRR7HWkDxr7mdQ",
-    "name": "Ophiophagus One",
-    "latency": "71",
-    "health": 96,
-    "body": [
-      {
-        "x": 8,
-        "y": 8
-      },
-      {
-        "x": 8,
-        "y": 9
-      },
-      {
-        "x": 8,
-        "y": 10
-      }
-    ],
-    "head": {
-      "x": 8,
-      "y": 8
-    },
-    "length": 3,
-    "shout": ""
-  }
+	"game": {
+		"id": "f0521846-fff7-431d-b801-bc4ad85fc532",
+		"ruleset": {
+			"name": "royale",
+			"version": "v1.0.14"
+		},
+		"timeout": 500
+	},
+	"turn": 54,
+	"board": {
+		"height": 11,
+		"width": 11,
+		"snakes": [{
+			"id": "gs_xkjQHxtcG3Vb9x4W89PPB9BS",
+			"name": "Ophiophagus One",
+			"latency": "69",
+			"health": 88,
+			"body": [{
+				"x": 5,
+				"y": 1
+			}, {
+				"x": 5,
+				"y": 2
+			}, {
+				"x": 5,
+				"y": 3
+			}, {
+				"x": 4,
+				"y": 3
+			}, {
+				"x": 4,
+				"y": 4
+			}],
+			"head": {
+				"x": 5,
+				"y": 1
+			},
+			"length": 5,
+			"shout": ""
+		}, {
+			"id": "gs_K3Pwx6rHgvByW8RcmrDMYbDY",
+			"name": "Ophiophagus One",
+			"latency": "52",
+			"health": 16,
+			"body": [{
+				"x": 0,
+				"y": 10
+			}, {
+				"x": 0,
+				"y": 9
+			}, {
+				"x": 1,
+				"y": 9
+			}],
+			"head": {
+				"x": 0,
+				"y": 10
+			},
+			"length": 3,
+			"shout": ""
+		}],
+		"food": [{
+			"x": 0,
+			"y": 8
+		}, {
+			"x": 8,
+			"y": 6
+		}, {
+			"x": 3,
+			"y": 5
+		}, {
+			"x": 8,
+			"y": 3
+		}, {
+			"x": 2,
+			"y": 4
+		}, {
+			"x": 1,
+			"y": 7
+		}, {
+			"x": 10,
+			"y": 2
+		}, {
+			"x": 6,
+			"y": 9
+		}],
+		"hazards": [{
+			"x": 0,
+			"y": 10
+		}, {
+			"x": 0,
+			"y": 0
+		}, {
+			"x": 1,
+			"y": 10
+		}, {
+			"x": 1,
+			"y": 0
+		}, {
+			"x": 2,
+			"y": 10
+		}, {
+			"x": 2,
+			"y": 0
+		}, {
+			"x": 3,
+			"y": 10
+		}, {
+			"x": 3,
+			"y": 0
+		}, {
+			"x": 4,
+			"y": 10
+		}, {
+			"x": 4,
+			"y": 0
+		}, {
+			"x": 5,
+			"y": 10
+		}, {
+			"x": 5,
+			"y": 0
+		}, {
+			"x": 6,
+			"y": 10
+		}, {
+			"x": 6,
+			"y": 0
+		}, {
+			"x": 7,
+			"y": 10
+		}, {
+			"x": 7,
+			"y": 0
+		}, {
+			"x": 8,
+			"y": 10
+		}, {
+			"x": 8,
+			"y": 0
+		}, {
+			"x": 9,
+			"y": 10
+		}, {
+			"x": 9,
+			"y": 0
+		}, {
+			"x": 10,
+			"y": 10
+		}, {
+			"x": 10,
+			"y": 0
+		}]
+	},
+	"you": {
+		"id": "gs_xkjQHxtcG3Vb9x4W89PPB9BS",
+		"name": "Ophiophagus One",
+		"latency": "69",
+		"health": 88,
+		"body": [{
+			"x": 5,
+			"y": 1
+		}, {
+			"x": 5,
+			"y": 2
+		}, {
+			"x": 5,
+			"y": 3
+		}, {
+			"x": 4,
+			"y": 3
+		}, {
+			"x": 4,
+			"y": 4
+		}],
+		"head": {
+			"x": 5,
+			"y": 1
+		},
+		"length": 5,
+		"shout": ""
+	}
 }

@@ -66,6 +66,11 @@ function handleMove(request, response) {
       badPoints[posStr(newHeadPos)] = true
     })
   })
+  gameData.board.hazards.forEach(hazard => {
+    badPoints[posStr(hazard)] = true
+  })
+
+  if (VERBOSE) console.log('current position', gameData.you.head)
 
   var okMoves = possibleMoves.filter(move => {
     const moveVec = moveVecs[move]
@@ -75,16 +80,16 @@ function handleMove(request, response) {
     }
 
     if (newPos.x >= gameData.board.width || newPos.x < 0) {
-      if (VERBOSE) console.log("can't move", move, 'outside board')
+      if (VERBOSE) console.log("can't move " + move + ': outside board')
       return false
     }
     if (newPos.y >= gameData.board.width || newPos.y < 0) {
-      if (VERBOSE) console.log("can't move", move, 'outside board')
+      if (VERBOSE) console.log("can't move " + move + ': outside board')
       return false
     }
 
     if (badPoints[posStr(newPos)] == true) {
-      if (VERBOSE) console.log("can't move", move, 'spot occupied')
+      if (VERBOSE) console.log("can't move " + move + ': spot occupied')
       return false
     }
 
