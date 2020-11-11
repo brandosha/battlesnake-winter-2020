@@ -11,6 +11,8 @@
 		F3FE2AC7255C944100447B59 /* Train.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2AC6255C944100447B59 /* Train.swift */; };
 		F3FE2ACB255C956A00447B59 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = F3FE2ACA255C956A00447B59 /* ArgumentParser */; };
 		F3FE2ACE255C97A800447B59 /* Execute.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2ACD255C97A800447B59 /* Execute.swift */; };
+		F3FE2AD1255C9EA600447B59 /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2AD0255C9EA600447B59 /* Game.swift */; };
+		F3FE2AD5255CA02800447B59 /* GameData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2AD4255CA02800447B59 /* GameData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -30,6 +32,8 @@
 		F3FE2ABD255C7C1A00447B59 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F3FE2AC6255C944100447B59 /* Train.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Train.swift; sourceTree = "<group>"; };
 		F3FE2ACD255C97A800447B59 /* Execute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Execute.swift; sourceTree = "<group>"; };
+		F3FE2AD0255C9EA600447B59 /* Game.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
+		F3FE2AD4255CA02800447B59 /* GameData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,8 @@
 				F3FE2ABD255C7C1A00447B59 /* main.swift */,
 				F3FE2AC6255C944100447B59 /* Train.swift */,
 				F3FE2ACD255C97A800447B59 /* Execute.swift */,
+				F3FE2AD0255C9EA600447B59 /* Game.swift */,
+				F3FE2AD4255CA02800447B59 /* GameData.swift */,
 			);
 			path = "Battlesnake Winter 2020";
 			sourceTree = "<group>";
@@ -134,8 +140,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				F3FE2ACE255C97A800447B59 /* Execute.swift in Sources */,
+				F3FE2AD5255CA02800447B59 /* GameData.swift in Sources */,
 				F3FE2AC7255C944100447B59 /* Train.swift in Sources */,
 				F3FE2ABE255C7C1A00447B59 /* main.swift in Sources */,
+				F3FE2AD1255C9EA600447B59 /* Game.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
