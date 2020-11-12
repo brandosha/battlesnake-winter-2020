@@ -18,9 +18,7 @@ struct Train: ParsableCommand {
         
         game.printBoard()
         while game.remainingSnakes > 1 {
-            if (Bool.random()) {
-                game.food.insert(.random(in: game.board))
-            }
+            game.addFood()
             game.doMoves { snake, game in
                 let allMoves: [Game.Board.Direction] = [.up, .down, .left, .right]
                 
@@ -30,13 +28,13 @@ struct Train: ParsableCommand {
                     if !(0...game.board.width - 1 ~= newPos.x) { return false }
                     if !(0...game.board.height - 1 ~= newPos.y) { return false }
                     
-                    guard let boardEntity = game.boardDict[newPos] else { return true }
+                    guard let boardEntity = game.boardEntities[newPos]?.first else { return true }
                     
                     switch boardEntity {
-                    case .food:
-                        return true
-                    default:
-                        return false
+                    case .potential(let otherSnake): return otherSnake === snake
+                    case .head(let otherSnake): return otherSnake.length < snake.length
+                    case .food: return true
+                    default: return false
                     }
                 }
                 

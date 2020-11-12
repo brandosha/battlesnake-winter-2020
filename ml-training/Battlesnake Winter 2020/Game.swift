@@ -25,12 +25,11 @@ class Game {
             }
         }
         
-        enum Direction {
+        enum Direction: CaseIterable {
             case up, down, left, right
             
             static func random() -> Direction {
-                let all: [Direction] = [.up, .down, .left, .right]
-                return all.randomElement()!
+                return Direction.allCases.randomElement()!
             }
             
             func appliedTo(_ position: Positon) -> Positon {
@@ -54,17 +53,18 @@ class Game {
     }
     
     class Snake {
-        var facing: Board.Direction = .random()
         var head: Board.Positon
         var body: [Board.Positon]
         var isAlive: Bool = true
-        var id: String = {
+        
+        let id: String = {
             let chars = "0123456789abcdefghijklmnopqrstuvwxyz"
             return String((0...16).map { _ in chars.randomElement()! })
         }()
-        
         let bodyString = String("HXZN".randomElement()!)
         let headString = String("@0¢".randomElement()!)
+        
+        var length: Int { body.count }
         
         init(
             board: Board = .standard,
@@ -94,6 +94,26 @@ class Game {
         self.remainingSnakes = snakes.count
     }
     
+    func addFood() {
+        if !food.isEmpty && 0.15 < .random(in: 0..<1) { return }
+        
+        var openSpaces: [Board.Positon] = []
+        
+        for row in 0...board.height - 1 {
+            for col in 0...board.width - 1 {
+                let pos = Board.Positon(x: col, y: row)
+                
+                if boardEntities[pos] == nil {
+                    openSpaces.append(pos)
+                }
+            }
+        }
+        
+        if !openSpaces.isEmpty {
+            food.insert(openSpaces.randomElement()!)
+        }
+    }
+    
     func doMoves(selectMove: (Snake, Game) -> Board.Direction) {
         for snake in snakes {
             guard snake.isAlive else { continue }
@@ -113,97 +133,129 @@ class Game {
             }
         }
         
-        var snakeBodies: Dictionary<Board.Positon, (snake: Snake, isHead: Bool)> = [:]
-        for snake in snakes {
-            guard snake.isAlive else { continue }
-            
-            for (index, bodySegment) in snake.body.enumerated() {
-                let isHead = index == 0
-                if let collidedWith = snakeBodies[bodySegment] {
-                    if collidedWith.isHead {
-                        collidedWith.snake.isAlive = false
-                        remainingSnakes -= 1
-                    }
-                    if isHead {
-                        snake.isAlive = false
-                        remainingSnakes -= 1
-                    }
-                } else {
-                    snakeBodies[bodySegment] = (snake, isHead)
-                }
-            }
-        }
-        // cachedSnakeBodies = snakeBodies
-        
-        boardDict = getBoardDict()
+        boardEntities = getBoardEntities(applyCollisionRules: true)
     }
-    
-    /*private lazy var cachedSnakeBodies: Dictionary<Board.Positon, (snake: Snake, isHead: Bool)> = {
-        var snakeBodies: Dictionary<Board.Positon, (snake: Snake, isHead: Bool)> = [:]
-        for snake in snakes {
-            guard snake.isAlive else { continue }
-            
-            for (index, bodySegment) in snake.body.enumerated() {
-                let isHead = index == 0
-                if snakeBodies[bodySegment] != nil && isHead {
-                    snakeBodies[bodySegment] = (snake, isHead)
-                } else {
-                    snakeBodies[bodySegment] = (snake, isHead)
-                }
-            }
-        }
-        
-        return snakeBodies
-    }()*/
     
     enum Entity {
         case head(Snake)
         case body(Snake)
+        case potential(Snake)
         case food
-    }
-    
-    lazy var boardDict: Dictionary<Board.Positon, Entity?> = {
-        return getBoardDict()
-    }()
-    
-    private func getBoardDict() -> Dictionary<Board.Positon, Entity?> {
-        var boardDict: Dictionary<Board.Positon, Entity?> = [:]
         
-        for foodPos in food {
-            boardDict[foodPos] = .food
+        enum Case {
+            case head, body, potential, food
         }
         
-        for snake in snakes {
-            for bodySegment in snake.body {
-                if bodySegment == snake.head {
-                    boardDict[bodySegment] = .head(snake)
+        var `case`: Case {
+            switch self {
+            case .head: return .head
+            case .body: return .body
+            case .potential: return .potential
+            case .food: return.food
+            }
+        }
+    }
+    
+    lazy private(set) var boardEntities: Dictionary<Board.Positon, [Entity]> = {
+        return getBoardEntities()
+    }()
+    
+    private func getBoardEntities(applyCollisionRules: Bool = false) -> Dictionary<Board.Positon, [Entity]> {
+        var boardEntities: Dictionary<Board.Positon, [Entity]> = [:]
+        
+        for foodPos in food {
+            boardEntities[foodPos] = [.food]
+        }
+        
+        let sortedSnakes = snakes.sorted(by: {
+            if ($0.isAlive == $1.isAlive) { return false }
+            else { return $1.isAlive }
+        })
+        for snake in sortedSnakes {
+            for (index, bodySegment) in snake.body.enumerated() {
+                var entity: Entity
+                
+                let isHead = index == 0
+                if isHead {
+                    entity = .head(snake)
                 } else {
-                    boardDict[bodySegment] = .body(snake)
+                    entity = .body(snake)
+                }
+                
+                if let collisionEntity = boardEntities[bodySegment]?.first {
+                    if entity.case == .head && snake.isAlive {
+                        boardEntities[bodySegment]?.insert(entity, at: 0)
+                    } else { // Insert body entities after heads, and dead heads after living bodies
+                        var insertIndex = 0
+                        indexIncrement: for entity in boardEntities[bodySegment]! {
+                            switch entity {
+                            case .head:
+                                insertIndex += 1
+                            case .body(let otherSnake) where !snake.isAlive && otherSnake.isAlive:
+                                insertIndex += 1
+                            default:
+                                break indexIncrement
+                            }
+                        }
+                        
+                        boardEntities[bodySegment]?.insert(entity, at: insertIndex)
+                    }
+                    
+                    if !applyCollisionRules || !snake.isAlive { continue } // Ignore collision rules
+                    
+                    switch collisionEntity {
+                    case .head(let otherSnake) where otherSnake.isAlive:
+                        if isHead {
+                            if snake.length >= otherSnake.length {
+                                otherSnake.isAlive = false
+                            } else {
+                                snake.isAlive = false
+                            }
+                        } else {
+                            otherSnake.isAlive = false
+                        }
+                        
+                        remainingSnakes -= 1
+                    case .body(let otherSnake) where isHead && otherSnake.isAlive:
+                        snake.isAlive = false
+                        remainingSnakes -= 1
+                    default: break // No collision
+                    }
+                } else {
+                    boardEntities[bodySegment] = [entity]
+                }
+            }
+            
+            for potentialMove in Board.Direction.allCases {
+                let potentialPos = potentialMove.appliedTo(snake.head)
+                
+                if boardEntities[potentialPos] == nil {
+                    boardEntities[potentialPos] = [.potential(snake)]
+                } else {
+                    boardEntities[potentialPos]?.append(.potential(snake))
                 }
             }
         }
         
-        return boardDict
+        return boardEntities
     }
     
     func printBoard() {
-        var textRows: [String] = [.init(repeating: "-", count: board.width + 2)]
-        for row in 0...board.height - 1 {
+        var textRows: [String] = [.init(repeating: "-", count: board.width * 3 + 2)]
+        for row in (0...board.height - 1).reversed() {
             var textRow: String = "|"
             for col in 0...board.width - 1 {
                 let pos = Board.Positon(x: col, y: row)
                 
-                switch boardDict[pos] {
-                case .body(let snake):
-                    if snake.isAlive { textRow += snake.bodyString }
-                    else { textRow += " " }
-                case .head(let snake):
-                    if snake.isAlive { textRow += snake.headString }
-                    else { textRow += " " }
+                switch boardEntities[pos]?.first {
+                case .body(let snake) where snake.isAlive:
+                    textRow += " \(snake.bodyString) "
+                case .head(let snake) where snake.isAlive:
+                    textRow += " \(snake.headString) "
                 case .food:
-                    textRow += "*"
+                    textRow += " * "
                 default:
-                    textRow += " "
+                    textRow += "   "
                 }
                 
                 /*if let bodyPart = cachedSnakeBodies[pos] {
@@ -222,7 +274,7 @@ class Game {
             textRow += "|"
             textRows.append(textRow)
         }
-        textRows.append(.init(repeating: "-", count: board.width + 2))
+        textRows.append(.init(repeating: "-", count: board.width * 3 + 2))
         
         print(textRows.joined(separator: "\n"))
     }
