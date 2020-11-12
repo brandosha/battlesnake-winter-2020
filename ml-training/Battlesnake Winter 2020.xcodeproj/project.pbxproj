@@ -68,8 +68,8 @@
 			isa = PBXGroup;
 			children = (
 				F3FE2ABD255C7C1A00447B59 /* main.swift */,
-				F3FE2AC6255C944100447B59 /* Train.swift */,
 				F3FE2ACD255C97A800447B59 /* Execute.swift */,
+				F3FE2AC6255C944100447B59 /* Train.swift */,
 				F3FE2AD0255C9EA600447B59 /* Game.swift */,
 				F3FE2AD4255CA02800447B59 /* GameData.swift */,
 			);
