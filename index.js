@@ -30,7 +30,7 @@ function handleIndex(request, response) {
 function handleStart(request, response) {
   var gameData = request.body
 
-  console.log('START')
+  console.log('START', gameData)
   response.status(200).send('ok')
 }
 
@@ -42,6 +42,13 @@ function surviveAlone(snake, board) {
   let pos = snake.head
   let evenRow = pos.y % 2 == 0
   let evenCol = pos.x % 2 == 0
+
+  const maxLength = board.width * board.height
+
+  if (
+    snake.body.length == maxLength - 1 &&
+    pos.x == 0 && pos.y == 1
+  ) { return 'down' }
   
   if (pos.x == 0) {
     if (pos.y == board.height - 1) { return 'right' }
@@ -71,8 +78,20 @@ function handleMove(request, response) {
   if (gameData.board.snakes.length == 1) {
     const maxGameLength = 1000
 
-    if (gameData.turn > maxGameLength) return 'down'
-    else return surviveAlone(gameData.you)
+    if (gameData.turn > maxGameLength) {
+      response.status(200).send({
+        move: 'down'
+      })
+    } else {
+      console.log("position", gameData.you.head)
+      console.log("MOVE:", surviveAlone(gameData.you, gameData.board))
+
+      response.status(200).send({
+        move: surviveAlone(gameData.you, gameData.board)
+      })
+    }
+
+    return
   }
 
   /** @type { ['up', 'down', 'left', 'right'] } */
@@ -88,6 +107,8 @@ function handleMove(request, response) {
 
   const badPoints = {}
   gameData.board.snakes.forEach(snake => {
+    if (snake.health == 0) return
+
     snake.body.slice(0, -1).forEach(pos => {
       badPoints[posStr(pos)] = true
     })
