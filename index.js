@@ -34,14 +34,17 @@ function handleStart(request, response) {
   response.status(200).send('ok')
 }
 
-/** @param { BattleSnake.Snake } snake */
-function surviveAlone(snake) {
+/** 
+ * @param { BattleSnake.Snake } snake
+ * @param { BattleSnake.Board } board
+ * */
+function surviveAlone(snake, board) {
   let pos = snake.head
   let evenRow = pos.y % 2 == 0
   let evenCol = pos.x % 2 == 0
   
   if (pos.x == 0) {
-    if (pos.y == 10) { return 'right' }
+    if (pos.y == board.height - 1) { return 'right' }
     else { return 'up' }
   } else if (pos.y == 1) {
     if (evenCol) { return 'down' }
@@ -49,7 +52,7 @@ function surviveAlone(snake) {
   } else if (pos.y == 0) {
     if (evenCol) { return 'left' }
     else { return 'up' }
-  } else if (pos.x == 10) {
+  } else if (pos.x == board.width - 1) {
     if (evenRow) { return 'down' }
     else { return 'left' }
   } else if (pos.x == 1) {
