@@ -27,8 +27,12 @@ function handleIndex(request, response) {
   response.status(200).json(battlesnakeInfo)
 }
 
+let soloRound = 0
+
 function handleStart(request, response) {
   var gameData = request.body
+
+  if (gameData.snakes.length == 1) soloRound = 0
 
   console.log('START', gameData)
   response.status(200).send('ok')
@@ -46,7 +50,7 @@ function surviveAlone(snake, board) {
   const maxLength = board.width * board.height
 
   if (
-    snake.body.length == maxLength - 1 &&
+    snake.body.length == maxLength - 2 &&
     pos.x == 0 && pos.y == 1
   ) { return 'down' }
   
@@ -58,6 +62,12 @@ function surviveAlone(snake, board) {
     else { return 'left' }
   } else if (pos.y == 0) {
     if (evenCol) { return 'left' }
+    else if (pos.x == 1)  {
+      soloRound += 1
+      console.log('Solo round', soloRound)
+      if (soloRound % 2 == 1) { return 'left' }
+      else { return 'up' }
+    }
     else { return 'up' }
   } else if (pos.x == board.width - 1) {
     if (evenRow) { return 'down' }
@@ -84,10 +94,11 @@ function handleMove(request, response) {
       })
     } else {
       console.log("position", gameData.you.head)
-      console.log("MOVE:", surviveAlone(gameData.you, gameData.board))
+      const move = surviveAlone(gameData.you, gameData.board)
+      console.log("MOVE:", move)
 
       response.status(200).send({
-        move: surviveAlone(gameData.you, gameData.board)
+        move: move
       })
     }
 

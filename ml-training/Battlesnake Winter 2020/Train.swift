@@ -14,9 +14,11 @@ struct Train: ParsableCommand {
         
         let board = Game.Board(width: 7, height: 7)
         let game = Game(board: board, snakes: [Game.Snake(in: board)])
-        let maxLength = game.board.width * game.board.height
+        // let maxLength = game.board.width * game.board.height
         
         var stepsPlayed = 0
+        
+        var soloRound = 0
         
         game.printBoard()
         while game.remainingSnakes > 0 {
@@ -29,9 +31,9 @@ struct Train: ParsableCommand {
                 
                 // print(pos, evenRow, evenCol)
                 
-                if snake.length == maxLength - 2 && pos == .init(x: 0, y: 1) {
+                /*if snake.length == maxLength - 2 && pos == .init(x: 0, y: 1) {
                     return .down
-                }
+                }*/
                 
                 if pos.x == 0 {
                     if pos.y == game.board.height - 1 { return .right }
@@ -41,6 +43,11 @@ struct Train: ParsableCommand {
                     else { return .left }
                 } else if pos.y == 0 {
                     if evenCol { return .left }
+                    else if pos.x == 1  {
+                        soloRound += 1
+                        if soloRound % 2 == 1 { return .left }
+                        else { return .up }
+                    }
                     else { return .up }
                 } else if pos.x == game.board.width - 1 {
                     if evenRow { return .down }
