@@ -98,8 +98,33 @@ function handleMove(request, response) {
 
   if (VERBOSE) console.log('selecting move from', okMoves)
 
+  // Sort moves by resultant distance from center
+  okMoves.sort((move1, move2) => {
+    const pos = [move1, move2].map(move => {
+      const moveVec = moveVecs[move]
+      const newPos = {
+        x: gameData.you.head.x + moveVec.x,
+        y: gameData.you.head.y + moveVec.y
+      }
+
+      return newPos
+    })
+
+    const dist = pos.map(pos => {
+      return Math.sqrt(
+        Math.pow(pos.x - gameData.board.width / 2, 2) +
+        Math.pow(pos.y - gameData.board.height / 2, 2)
+      )
+    })
+
+    return dist[0] - dist[1]
+  })
+
+  let index = Math.random()
+  index = Math.floor(index * index * okMoves.length)
+
   const randFrom = (array) => array[Math.floor(Math.random() * array.length)]
-  const move = randFrom(okMoves) || randFrom(possibleMoves)
+  const move = okMoves[index] || randFrom(possibleMoves)
 
   console.log('MOVE: ' + move)
   response.status(200).send({
