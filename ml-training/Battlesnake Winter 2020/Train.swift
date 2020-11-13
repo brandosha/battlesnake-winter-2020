@@ -12,7 +12,9 @@ struct Train: ParsableCommand {
     func run() throws {
         print("Training...")
         
-        let game = Game(snakes: [Game.Snake()])
+        let board = Game.Board(width: 7, height: 7)
+        let game = Game(board: board, snakes: [Game.Snake(in: board)])
+        let maxLength = game.board.width * game.board.height
         
         var stepsPlayed = 0
         
@@ -26,6 +28,10 @@ struct Train: ParsableCommand {
                 let evenCol = pos.x % 2 == 0
                 
                 // print(pos, evenRow, evenCol)
+                
+                if snake.length == maxLength - 2 && pos == .init(x: 0, y: 1) {
+                    return .down
+                }
                 
                 if pos.x == 0 {
                     if pos.y == game.board.height - 1 { return .right }

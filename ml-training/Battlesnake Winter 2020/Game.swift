@@ -53,9 +53,12 @@ class Game {
     }
     
     class Snake {
-        var head: Board.Positon
-        var body: [Board.Positon]
-        var isAlive: Bool = true
+        fileprivate(set) var head: Board.Positon
+        fileprivate(set) var body: [Board.Positon]
+        fileprivate(set) var isAlive: Bool = true
+        
+        static let maxHealth = 100
+        fileprivate(set) var health: Int = Snake.maxHealth
         
         let id: String = {
             let chars = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -67,7 +70,7 @@ class Game {
         var length: Int { body.count }
         
         init(
-            board: Board = .standard,
+            in board: Board = .standard,
             head: Board.Positon? = nil,
             length: Int = 3
         ) {
@@ -88,7 +91,7 @@ class Game {
     var food: Set<Board.Positon> = []
     var remainingSnakes: Int
     
-    init(_ board: Board = .standard, snakes: [Snake]) {
+    init(board: Board = .standard, snakes: [Snake]) {
         self.board = board
         self.snakes = snakes
         self.remainingSnakes = snakes.count
@@ -121,7 +124,10 @@ class Game {
             let move = selectMove(snake, self)
             snake.move(move)
             
+            snake.health -= 1
+            
             if (
+                snake.health <= 0 ||
                 !(0...self.board.width - 1 ~= snake.head.x) ||
                 !(0...self.board.height - 1 ~= snake.head.y)
             ) {
@@ -130,6 +136,7 @@ class Game {
             } else if food.contains(snake.head) {
                 food.remove(snake.head)
                 snake.body.append(snake.body.last!)
+                snake.health = Snake.maxHealth
             }
         }
         
@@ -156,7 +163,7 @@ class Game {
         }
     }
     
-    lazy private(set) var boardEntities: Dictionary<Board.Positon, [Entity]> = {
+    lazy private(set) var boardEntities: [Board.Positon: [Entity]] = {
         return setBoardEntities()
     }()
     
@@ -208,8 +215,7 @@ class Game {
         }
     }
     
-    private func setBoardEntities(applyCollisionRules: Bool = false) -> Dictionary<Board.Positon, [Entity]> {
-        // var boardEntities: Dictionary<Board.Positon, [Entity]> = [:]
+    private func setBoardEntities(applyCollisionRules: Bool = false) -> [Board.Positon: [Entity]] {
         boardEntities = [:]
         
         for foodPos in food {
@@ -269,9 +275,9 @@ class Game {
                         }*/
                     }
                     
-                    if !applyCollisionRules || !snake.isAlive { continue } // Ignore collision rules
-                    
-                    handleCollision(entity, collisionEntity)
+                    if applyCollisionRules && snake.isAlive {
+                        handleCollision(entity, collisionEntity)
+                    }
                 } else {
                     boardEntities[bodySegment] = [entity]
                 }
