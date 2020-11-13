@@ -34,9 +34,43 @@ function handleStart(request, response) {
   response.status(200).send('ok')
 }
 
+/** @param { BattleSnake.Snake } snake */
+function surviveAlone(snake) {
+  let pos = snake.head
+  let evenRow = pos.y % 2 == 0
+  let evenCol = pos.x % 2 == 0
+  
+  if (pos.x == 0) {
+    if (pos.y == 10) { return 'right' }
+    else { return 'up' }
+  } else if (pos.y == 1) {
+    if (evenCol) { return 'down' }
+    else { return 'left' }
+  } else if (pos.y == 0) {
+    if (evenCol) { return 'left' }
+    else { return 'up' }
+  } else if (pos.x == 10) {
+    if (evenRow) { return 'down' }
+    else { return 'left' }
+  } else if (pos.x == 1) {
+    if (evenRow) { return 'right' }
+    else { return 'down' }
+  }
+  
+  if (evenRow) { return 'right' }
+  else { return 'left' }
+}
+
 function handleMove(request, response) {
   /** @type { BattleSnake.GameData } */
   const gameData = request.body
+
+  if (gameData.board.snakes.length == 1) {
+    const maxGameLength = 1000
+
+    if (gameData.turn > maxGameLength) return 'down'
+    else return surviveAlone(gameData.you)
+  }
 
   /** @type { ['up', 'down', 'left', 'right'] } */
   const possibleMoves = ['up', 'down', 'left', 'right']
@@ -96,8 +130,6 @@ function handleMove(request, response) {
     return true
   })
 
-  if (VERBOSE) console.log('selecting move from', okMoves)
-
   // Sort moves by resultant distance from center
   okMoves.sort((move1, move2) => {
     const pos = [move1, move2].map(move => {
@@ -119,6 +151,8 @@ function handleMove(request, response) {
 
     return dist[0] - dist[1]
   })
+
+  if (VERBOSE) console.log('selecting move from', okMoves)
 
   let index = Math.random()
   index = Math.floor(index * index * okMoves.length)
