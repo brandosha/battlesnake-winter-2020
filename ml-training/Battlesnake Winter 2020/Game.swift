@@ -133,7 +133,7 @@ class Game {
             }
         }
         
-        boardEntities = getBoardEntities(applyCollisionRules: true)
+        boardEntities = setBoardEntities(applyCollisionRules: true)
     }
     
     enum Entity {
@@ -157,11 +157,60 @@ class Game {
     }
     
     lazy private(set) var boardEntities: Dictionary<Board.Positon, [Entity]> = {
-        return getBoardEntities()
+        return setBoardEntities()
     }()
     
-    private func getBoardEntities(applyCollisionRules: Bool = false) -> Dictionary<Board.Positon, [Entity]> {
-        var boardEntities: Dictionary<Board.Positon, [Entity]> = [:]
+    private func hideDeadSnake(_ snake: Snake) {
+        remainingSnakes -= 1
+        
+        for bodySegment in snake.body {
+            guard let entities = boardEntities[bodySegment] else { continue }
+            
+            rotating: for _ in 1...entities.count {
+                let top = entities.first!
+                switch top {
+                case .head(let s) where s === snake, .body(let s) where s === snake:
+                    boardEntities[bodySegment] = entities.suffix(from: 1) + [top]
+                default:
+                    break rotating
+                }
+            }
+        }
+    }
+    
+    private func handleCollision(_ a: Entity, _ b: Entity) {
+        switch (a, b) {
+        case (.head(let snakeA), .head(let snakeB)),
+             (.body(let snakeA), .head(let snakeB)),
+             (.head(let snakeA), .body(let snakeB)):
+            if !snakeA.isAlive || !snakeB.isAlive { return }
+        default:
+            break
+        }
+        
+        switch (a, b) {
+        case (.head(let snakeA), .head(let snakeB)):
+            if snakeA.length >= snakeB.length {
+                snakeB.isAlive = false
+                hideDeadSnake(snakeB)
+            } else {
+                snakeA.isAlive = false
+                hideDeadSnake(snakeA)
+            }
+        case (.head(let snake), .body):
+            snake.isAlive = false
+            hideDeadSnake(snake)
+        case (.body, .head(let snake)):
+            snake.isAlive = false
+            hideDeadSnake(snake)
+        default:
+            break
+        }
+    }
+    
+    private func setBoardEntities(applyCollisionRules: Bool = false) -> Dictionary<Board.Positon, [Entity]> {
+        // var boardEntities: Dictionary<Board.Positon, [Entity]> = [:]
+        boardEntities = [:]
         
         for foodPos in food {
             boardEntities[foodPos] = [.food]
@@ -183,48 +232,54 @@ class Game {
                 }
                 
                 if let collisionEntity = boardEntities[bodySegment]?.first {
-                    if entity.case == .head && snake.isAlive {
-                        boardEntities[bodySegment]?.insert(entity, at: 0)
-                    } else { // Insert body entities after heads, and dead heads after living bodies
-                        var insertIndex = 0
-                        indexIncrement: for entity in boardEntities[bodySegment]! {
-                            switch entity {
-                            case .head:
-                                insertIndex += 1
-                            case .body(let otherSnake) where !snake.isAlive && otherSnake.isAlive:
-                                insertIndex += 1
-                            default:
-                                break indexIncrement
+                    let sharingEntities = boardEntities[bodySegment]!
+                    
+                    if snake.isAlive {
+                        if entity.case == .head {
+                            boardEntities[bodySegment]?.insert(entity, at: 0)
+                        } else {
+                            var insertIndex = 0
+                            indexIncrement: for entity in sharingEntities {
+                                switch entity {
+                                case .head(let otherSnake) where otherSnake.isAlive:
+                                    insertIndex += 1
+                                default:
+                                    break indexIncrement
+                                }
                             }
+                            
+                            boardEntities[bodySegment]?.insert(entity, at: insertIndex)
                         }
-                        
-                        boardEntities[bodySegment]?.insert(entity, at: insertIndex)
+                    } else {
+                        boardEntities[bodySegment]?.append(entity)
+                        /*if entity.case == .head {
+                            var insertIndex = sharingEntities.count - 1
+                            decrementIndex: for entity in sharingEntities.reversed() {
+                                switch entity {
+                                case .body(let otherSnake) where !otherSnake.isAlive:
+                                    insertIndex -= 1
+                                default:
+                                    break decrementIndex
+                                }
+                            }
+                            
+                            boardEntities[bodySegment]?.insert(entity, at: insertIndex)
+                        } else {
+                            boardEntities[bodySegment]?.append(entity)
+                        }*/
                     }
                     
                     if !applyCollisionRules || !snake.isAlive { continue } // Ignore collision rules
                     
-                    switch collisionEntity {
-                    case .head(let otherSnake) where otherSnake.isAlive:
-                        if isHead {
-                            if snake.length >= otherSnake.length {
-                                otherSnake.isAlive = false
-                            } else {
-                                snake.isAlive = false
-                            }
-                        } else {
-                            otherSnake.isAlive = false
-                        }
-                        
-                        remainingSnakes -= 1
-                    case .body(let otherSnake) where isHead && otherSnake.isAlive:
-                        snake.isAlive = false
-                        remainingSnakes -= 1
-                    default: break // No collision
-                    }
+                    handleCollision(entity, collisionEntity)
                 } else {
                     boardEntities[bodySegment] = [entity]
                 }
             }
+        }
+        
+        for snake in snakes {
+            if !snake.isAlive { continue }
             
             for potentialMove in Board.Direction.allCases {
                 let potentialPos = potentialMove.appliedTo(snake.head)
