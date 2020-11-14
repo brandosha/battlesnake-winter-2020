@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F3C24BA3255F113A009D3EDD /* Brain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C24BA2255F113A009D3EDD /* Brain.swift */; };
 		F3FE2ABE255C7C1A00447B59 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2ABD255C7C1A00447B59 /* main.swift */; };
 		F3FE2AC7255C944100447B59 /* Train.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3FE2AC6255C944100447B59 /* Train.swift */; };
 		F3FE2ACB255C956A00447B59 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = F3FE2ACA255C956A00447B59 /* ArgumentParser */; };
@@ -28,6 +29,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F3C24BA2255F113A009D3EDD /* Brain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brain.swift; sourceTree = "<group>"; };
 		F3FE2ABA255C7C1A00447B59 /* Battlesnake Winter 2020 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Battlesnake Winter 2020"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3FE2ABD255C7C1A00447B59 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F3FE2AC6255C944100447B59 /* Train.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Train.swift; sourceTree = "<group>"; };
@@ -70,6 +72,7 @@
 				F3FE2ABD255C7C1A00447B59 /* main.swift */,
 				F3FE2ACD255C97A800447B59 /* Execute.swift */,
 				F3FE2AC6255C944100447B59 /* Train.swift */,
+				F3C24BA2255F113A009D3EDD /* Brain.swift */,
 				F3FE2AD0255C9EA600447B59 /* Game.swift */,
 				F3FE2AD4255CA02800447B59 /* GameData.swift */,
 			);
@@ -143,6 +146,7 @@
 				F3FE2AD5255CA02800447B59 /* GameData.swift in Sources */,
 				F3FE2AC7255C944100447B59 /* Train.swift in Sources */,
 				F3FE2ABE255C7C1A00447B59 /* main.swift in Sources */,
+				F3C24BA3255F113A009D3EDD /* Brain.swift in Sources */,
 				F3FE2AD1255C9EA600447B59 /* Game.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

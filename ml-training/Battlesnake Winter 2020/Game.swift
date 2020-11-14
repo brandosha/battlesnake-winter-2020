@@ -97,7 +97,7 @@ class Game {
         self.remainingSnakes = snakes.count
     }
     
-    func addFood() {
+    private func addFood() {
         if !food.isEmpty && 0.15 < .random(in: 0..<1) { return }
         
         var openSpaces: [Board.Positon] = []
@@ -118,6 +118,8 @@ class Game {
     }
     
     func doMoves(selectMove: (Snake, Game) -> Board.Direction) {
+        addFood()
+        
         for snake in snakes {
             guard snake.isAlive else { continue }
             

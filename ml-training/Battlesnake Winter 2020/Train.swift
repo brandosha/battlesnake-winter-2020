@@ -13,27 +13,55 @@ struct Train: ParsableCommand {
         print("Training...")
         
         let board = Game.Board(width: 7, height: 7)
-        let game = Game(board: board, snakes: [Game.Snake(in: board)])
+        let snakes = [Game.Snake(in: board), Game.Snake(in: board), Game.Snake(in: board)]
+        let game = Game(board: board, snakes: snakes)
+        
+        var brains: [String: Brain] = [:]
+        for snake in snakes {
+            brains[snake.id] = Brain(for: snake, in: game)
+        }
         // let maxLength = game.board.width * game.board.height
         
         var stepsPlayed = 0
         
-        var soloRound = 0
+        // var soloRound = 0
         
         game.printBoard()
-        while game.remainingSnakes > 0 {
-            game.addFood()
+        while game.remainingSnakes > 1 {
             
-            game.doMoves { snake, _ in
+            game.doMoves { snake, game in
+                guard let brain = brains[snake.id] else { return .random() }
+                
+                let scoredMoves = brain.scoreMoves()
+                let okMoves = scoredMoves.filter { (move, score) in
+                    let newPos = move.appliedTo(snake.head)
+                    
+                    if (
+                        !(0...game.board.width - 1 ~= newPos.x) ||
+                        !(0...game.board.height - 1 ~= newPos.y)
+                    ) { return false }
+                    
+                    switch game.boardEntities[newPos]?.first {
+                    case .body(let otherSnake) where otherSnake.isAlive:
+                        return false
+                    case .head(let otherSnake) where otherSnake.isAlive && otherSnake !== snake:
+                        return false
+                    default: return true
+                    }
+                }
+                
+                // print(" \(snake.bodyString) \(snake.headString)", okMoves)
+                if okMoves.isEmpty { return .random() }
+                
+                let sorted = okMoves.sorted(by: { $1.score > $0.score })
+                let index = Int(pow(Double.random(in: 0..<1), 2) * Double(okMoves.count))
+                return sorted[index].move
+            }
+            
+            /*game.doMoves { snake, _ in
                 let pos = snake.head
                 let evenRow = pos.y % 2 == 0
                 let evenCol = pos.x % 2 == 0
-                
-                // print(pos, evenRow, evenCol)
-                
-                /*if snake.length == maxLength - 2 && pos == .init(x: 0, y: 1) {
-                    return .down
-                }*/
                 
                 if pos.x == 0 {
                     if pos.y == game.board.height - 1 { return .right }
@@ -59,7 +87,7 @@ struct Train: ParsableCommand {
                 
                 if evenRow { return .right }
                 else { return .left }
-            }
+            }*/
             
             /*game.doMoves { snake, game in
                 let allMoves: [Game.Board.Direction] = [.up, .down, .left, .right]
@@ -103,6 +131,7 @@ struct Train: ParsableCommand {
                 let index = Int(floor(pow(Double.random(in: 0..<1), 2) * Double(okMoves.count)))
                 return movesOrderedByValue[index]
             }*/
+            
             usleep(100 * 1000)
             game.printBoard()
             
