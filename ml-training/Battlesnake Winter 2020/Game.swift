@@ -55,7 +55,13 @@ class Game {
     class Snake {
         fileprivate(set) var head: Board.Positon
         fileprivate(set) var body: [Board.Positon]
-        fileprivate(set) var isAlive: Bool = true
+        fileprivate(set) var isAlive: Bool = true {
+            didSet {
+                if !isAlive { onDeath?() }
+            }
+        }
+        
+        var onDeath: (() -> ())?
         
         static let maxHealth = 100
         fileprivate(set) var health: Int = Snake.maxHealth
@@ -88,8 +94,8 @@ class Game {
     
     let board: Board
     let snakes: [Snake]
-    var food: Set<Board.Positon> = []
-    var remainingSnakes: Int
+    private(set) var food: Set<Board.Positon> = []
+    private(set) var remainingSnakes: Int
     
     init(board: Board = .standard, snakes: [Snake]) {
         self.board = board
@@ -98,7 +104,7 @@ class Game {
     }
     
     private func addFood() {
-        if !food.isEmpty && 0.15 < .random(in: 0..<1) { return }
+        if !food.isEmpty && 0.15 < .random(in: 0...1) { return }
         
         var openSpaces: [Board.Positon] = []
         

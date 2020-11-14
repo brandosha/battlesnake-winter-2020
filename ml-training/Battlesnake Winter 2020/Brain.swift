@@ -130,7 +130,57 @@ struct Brain {
     
     let weights: [Matrix]
     let biases: [Matrix]
-    // let layers: [(weights: Matrix, biases: Matrix)]
+    
+    struct Variables {
+        let weights: [Matrix]
+        let biases: [Matrix]
+        
+        func offspring(with variables: Variables) -> Variables {
+            let newWeights = weights.enumerated().map { (index, weightMatrix) -> Matrix in
+                let otherWeights = variables.weights[index]
+                
+                return weightMatrix.map { val1, row, col in
+                    let val2 = otherWeights[row, col]
+                    
+                    if 0.15 > .random(in: 0...1) {
+                        return .random(in: -0.1...0.1)
+                    }
+                    
+                    if (Bool.random()) { return val2 }
+                    else { return val1 }
+                }
+            }
+            
+            let newBiases = biases.enumerated().map { (index, weightMatrix) -> Matrix in
+                let otherBiases = variables.biases[index]
+                
+                return weightMatrix.map { val1, row, col in
+                    let val2 = otherBiases[row, col]
+                    
+                    if 0.15 > .random(in: 0...1) {
+                        return .random(in: -0.1...0.1)
+                    }
+                    
+                    if (Bool.random()) { return val2 }
+                    else { return val1 }
+                }
+            }
+            
+            return Variables(weights: newWeights, biases: newBiases)
+        }
+    }
+    
+    var variables: Variables {
+        Variables(weights: weights, biases: biases)
+    }
+    
+    init(with variables: Variables, for snake: Game.Snake, in game: Game) {
+        self.snake = snake
+        self.game = game
+        
+        self.weights = variables.weights
+        self.biases = variables.biases
+    }
     
     init(for snake: Game.Snake, in game: Game) {
         self.snake = snake
@@ -185,7 +235,8 @@ struct Brain {
         return input
     }
     
-    func scoreMoves() -> [(move: Game.Board.Direction, score: Double)] {
+    typealias ScoredMove = (move: Game.Board.Direction, score: Double)
+    func getScoredMoves() -> [ScoredMove] {
         let modelInput: Matrix = [
             getInput()
         ]
