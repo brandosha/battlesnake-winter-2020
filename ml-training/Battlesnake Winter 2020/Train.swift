@@ -20,7 +20,14 @@ struct Train: ParsableCommand {
         
         var prevGeneration: [GameResult] = []
         
-        for gen in 1...10 {
+        do {
+            let brainVariables = try Brain.Variables.readFromFile()
+            prevGeneration = [(brainVariables, 0)]
+        } catch {
+            print("No previously saved data")
+        }
+        
+        for gen in 1...25 {
             var allResults: [GameResult] = []
             
             for queue in queues {
@@ -38,19 +45,22 @@ struct Train: ParsableCommand {
             
             group.wait()
             
+            try allResults[0].brain.saveToFile()
+            
             prevGeneration = allResults.sorted(by: { $1.stepsSurvived < $0.stepsSurvived })
             let avg = prevGeneration.reduce(0, { $0 + $1.stepsSurvived / prevGeneration.count })
+            let median = prevGeneration[prevGeneration.count / 2].stepsSurvived
             
-            print("Generation \(gen) - best: \(prevGeneration[0].stepsSurvived), avg: \(avg)")
+            print("Generation \(gen) - best: \(prevGeneration[0...2].map(\.stepsSurvived)), avg: \(avg), median: \(median)")
         }
     }
     
-    typealias GameResult = (brain: Brain, stepsSurvived: Int)
+    typealias GameResult = (brain: Brain.Variables, stepsSurvived: Int)
     func playThroughGame(_ prevGeneration: [GameResult] = []) -> [GameResult] {
         var deadBrains: [GameResult] = []
         var stepsPlayed = 0
         
-        let board = Game.Board(width: 7, height: 7)
+        let board = Game.Board(width: 11, height: 11)
         let snakes = (1...4).map { _ in Game.Snake(in: board) }
         let game = Game(board: board, snakes: snakes)
         
@@ -64,14 +74,14 @@ struct Train: ParsableCommand {
             } else {
                 let parents = (1...2).map { _ -> Brain.Variables in
                     let index = Int(Double(prevGeneration.count) * pow(Double.random(in: 0..<1), 2))
-                    return prevGeneration[index].brain.variables
+                    return prevGeneration[index].brain
                 }
                 
                 brain = Brain(with: parents[0].offspring(with: parents[1]), for: snake, in: game)
             }
             
             brains[snake.id] = brain
-            snake.onDeath = { deadBrains.append((brain, stepsPlayed)) }
+            snake.onDeath = { deadBrains.append((brain.variables, stepsPlayed)) }
         }
         
         while game.remainingSnakes > 0 {

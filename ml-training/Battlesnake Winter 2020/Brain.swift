@@ -85,6 +85,40 @@ struct Matrix: ExpressibleByArrayLiteral {
     func map(_ f: (_ value: Double) -> Double) -> Matrix {
         return self.map { val, _, _ in f(val) }
     }
+    
+    var data: Data {
+        let allValues = [Double](values.joined())
+        let dimensions = [self.dimensions.rows, self.dimensions.cols].map { UInt32($0) }
+        
+        var byteArray: [UInt8] = []
+        dimensions.withUnsafeBytes { byteArray.append(contentsOf: $0) }
+        allValues.withUnsafeBytes { byteArray.append(contentsOf: $0) }
+        
+        return Data(byteArray)
+    }
+    
+    init(data: Data) {
+        var dimensionsData: [UInt32] = [0, 0]
+        _ = dimensionsData.withUnsafeMutableBytes { data[0..<8].copyBytes(to: $0) }
+        
+        let rows = Int(dimensionsData[0])
+        let cols = Int(dimensionsData[1])
+        
+        let byteCount = 8 + rows * cols * 8
+        var allValues = [Double](repeating: 0, count: rows * cols)
+        _ = allValues.withUnsafeMutableBytes { data[8..<byteCount].copyBytes(to: $0) }
+        
+        var values: [[Double]] = []
+        for row in 0..<rows {
+            let start = row * cols
+            let end = start + cols - 1
+            
+            values.append([Double](allValues[start...end]))
+        }
+        
+        self.dimensions = (rows, cols)
+        self.values = values
+    }
 }
 
 infix operator .* : MultiplicationPrecedence
@@ -143,7 +177,7 @@ struct Brain {
                     let val2 = otherWeights[row, col]
                     
                     if 0.15 > .random(in: 0...1) {
-                        return .random(in: -0.1...0.1)
+                        return .random(in: -0.5...0.5)
                     }
                     
                     if (Bool.random()) { return val2 }
@@ -158,7 +192,7 @@ struct Brain {
                     let val2 = otherBiases[row, col]
                     
                     if 0.15 > .random(in: 0...1) {
-                        return .random(in: -0.1...0.1)
+                        return .random(in: -0.5...0.5)
                     }
                     
                     if (Bool.random()) { return val2 }
@@ -167,6 +201,57 @@ struct Brain {
             }
             
             return Variables(weights: newWeights, biases: newBiases)
+        }
+        
+        func saveToFile(_ filename: String = "model_variables.dat") throws {
+            let weightData = weights.flatMap { $0.data }
+            let biasData = biases.flatMap { $0.data }
+            
+            var count = UInt64(weightData.count)
+            let weightDataCount = withUnsafeBytes(of: &count, Array.init)
+            
+            var combinedData = Data()
+            combinedData.append(contentsOf: weightDataCount)
+            combinedData.append(contentsOf: weightData)
+            combinedData.append(contentsOf: biasData)
+            
+            try combinedData.write(to: URL(fileURLWithPath: filename))
+        }
+        
+        static func readFromFile(_ filename: String = "model_variables.dat") throws -> Variables {
+            let combinedData = try Data(contentsOf: URL(fileURLWithPath: filename))
+            
+            let weightDataCount = Int(combinedData[0...7].withUnsafeBytes { $0.load(as: UInt64.self) })
+            
+            let weightDataEnd = 8 + weightDataCount
+            let weightData = combinedData[8..<weightDataEnd]
+            let biasData = combinedData[weightDataEnd..<combinedData.count]
+            
+            func getMatrices(_ data: Data) -> [Matrix] {
+                var data = Data(data)
+                
+                var matrices: [Matrix] = []
+                while !data.isEmpty {
+                    var dimensionsData: [UInt32] = [0, 0]
+                    _ = dimensionsData.withUnsafeMutableBytes { data[0..<8].copyBytes(to: $0) }
+                    
+                    let rows = Int(dimensionsData[0])
+                    let cols = Int(dimensionsData[1])
+                    
+                    let byteCount = 8 + rows * cols * 8
+                    matrices.append(Matrix(data: data))
+                    
+                    if byteCount == data.count { break }
+                    data = data.advanced(by: byteCount)
+                }
+                
+                return matrices
+            }
+            
+            let weights = getMatrices(weightData)
+            let biases = getMatrices(biasData)
+            
+            return Variables(weights: weights, biases: biases)
         }
     }
     
@@ -186,7 +271,7 @@ struct Brain {
         self.snake = snake
         self.game = game
         
-        let initRange = -0.1...0.1
+        let initRange = -0.5...0.5
         let inputSize = 2 + game.board.width * game.board.height * 5
         self.weights = [
             .random(rows: inputSize, cols: 16, range: initRange),
