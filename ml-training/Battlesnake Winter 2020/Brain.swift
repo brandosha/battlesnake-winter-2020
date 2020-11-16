@@ -40,18 +40,18 @@ struct Matrix: ExpressibleByArrayLiteral {
         self.dimensions = (rows, cols)
     }
     
-    static func random(rows: Int, cols: Int, range: ClosedRange<Double> = -1...1) -> Matrix {
+    static func random(rows: Int, cols: Int) -> Matrix {
         let values = (1...rows).map { _ in
             (1...cols).map { _ in
-                Double.random(in: range)
+                Double.randomNormal()
             }
         }
         
         return Matrix(values)
     }
     
-    static func random(_ dimensions: Dimensions, range: ClosedRange<Double> = -1...1) -> Matrix {
-        return .random(rows: dimensions.rows, cols: dimensions.cols, range: range)
+    static func random(_ dimensions: Dimensions) -> Matrix {
+        return .random(rows: dimensions.rows, cols: dimensions.cols)
     }
     
     subscript(row: Int, col: Int) -> Double {
@@ -176,8 +176,8 @@ struct Brain {
                 return weightMatrix.map { val1, row, col in
                     let val2 = otherWeights[row, col]
                     
-                    if 0.15 > .random(in: 0...1) {
-                        return .random(in: -0.5...0.5)
+                    if 0.1 > .random(in: 0...1) {
+                        return .randomNormal()
                     }
                     
                     if (Bool.random()) { return val2 }
@@ -191,8 +191,8 @@ struct Brain {
                 return weightMatrix.map { val1, row, col in
                     let val2 = otherBiases[row, col]
                     
-                    if 0.15 > .random(in: 0...1) {
-                        return .random(in: -0.5...0.5)
+                    if 0.1 > .random(in: 0...1) {
+                        return .randomNormal()
                     }
                     
                     if (Bool.random()) { return val2 }
@@ -271,12 +271,11 @@ struct Brain {
         self.snake = snake
         self.game = game
         
-        let initRange = -0.5...0.5
         let inputSize = 2 + game.board.width * game.board.height * 5
         self.weights = [
-            .random(rows: inputSize, cols: 16, range: initRange),
-            .random(rows: 16, cols: 16, range: initRange),
-            .random(rows: 16, cols: 4, range: initRange)
+            .random(rows: inputSize, cols: 16),
+            .random(rows: 16, cols: 16),
+            .random(rows: 16, cols: 4)
         ]
         self.biases = weights.prefix(weights.count - 1).map {
             .random(rows: 1, cols: $0.dimensions.cols)
@@ -340,5 +339,26 @@ struct Brain {
         return Game.Board.Direction.allCases.enumerated().map {
             ($0.element, scores[$0.offset])
         }
+    }
+    
+    static func filterAndSortMoves(_ scoredMoves: [Brain.ScoredMove], for snake: Game.Snake, in game: Game) -> [Brain.ScoredMove] {
+        let filtered = scoredMoves.filter { (move, score) in
+            let newPos = move.appliedTo(snake.head)
+            
+            if (
+                !(0...game.board.width - 1 ~= newPos.x) ||
+                !(0...game.board.height - 1 ~= newPos.y)
+            ) { return false }
+            
+            switch game.boardEntities[newPos]?.first {
+            case .body(let otherSnake) where otherSnake.isAlive:
+                return false
+            case .head(let otherSnake) where otherSnake.isAlive && otherSnake !== snake:
+                return false
+            default: return true
+            }
+        }
+        
+        return filtered.sorted(by: { $1.score > $0.score })
     }
 }

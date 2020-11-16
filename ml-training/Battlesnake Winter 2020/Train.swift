@@ -12,22 +12,25 @@ struct Train: ParsableCommand {
     
     func run() throws {
         print("Training...")
-        
-        let queues = (1...4).map { index in
-            DispatchQueue(label: "Thread \(index)", qos: .background)
-        }
-        let group = DispatchGroup()
-        
+        try doTraining()
+    }
+    
+    func doTraining() throws {
         var prevGeneration: [GameResult] = []
         
         do {
             let brainVariables = try Brain.Variables.readFromFile()
             prevGeneration = [(brainVariables, 0)]
         } catch {
-            print("No previously saved data")
+            print("No saved model")
         }
         
-        for gen in 1...25 {
+        let queues = (1...4).map { index in
+            DispatchQueue(label: "Thread \(index)", qos: .background)
+        }
+        let group = DispatchGroup()
+        
+        for gen in 1...100 {
             var allResults: [GameResult] = []
             
             for queue in queues {
@@ -89,7 +92,7 @@ struct Train: ParsableCommand {
                 guard let brain = brains[snake.id] else { fatalError("Missing brain") }
                 
                 let scoredMoves = brain.getScoredMoves()
-                let sorted = filterAndSortMoves(scoredMoves, for: snake, in: game)
+                let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
                 
                 guard !sorted.isEmpty else { return .random() }
                 
@@ -101,26 +104,5 @@ struct Train: ParsableCommand {
         }
         
         return deadBrains
-    }
-    
-    func filterAndSortMoves(_ scoredMoves: [Brain.ScoredMove], for snake: Game.Snake, in game: Game) -> [Brain.ScoredMove] {
-        let filtered = scoredMoves.filter { (move, score) in
-            let newPos = move.appliedTo(snake.head)
-            
-            if (
-                !(0...game.board.width - 1 ~= newPos.x) ||
-                !(0...game.board.height - 1 ~= newPos.y)
-            ) { return false }
-            
-            switch game.boardEntities[newPos]?.first {
-            case .body(let otherSnake) where otherSnake.isAlive:
-                return false
-            case .head(let otherSnake) where otherSnake.isAlive && otherSnake !== snake:
-                return false
-            default: return true
-            }
-        }
-        
-        return filtered.sorted(by: { $1.score > $0.score })
     }
 }

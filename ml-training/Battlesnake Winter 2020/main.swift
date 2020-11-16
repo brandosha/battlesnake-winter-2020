@@ -11,6 +11,7 @@ import ArgumentParser
 
 struct MainApp: ParsableCommand {
     static var configuration = CommandConfiguration(
+        commandName: "battlesnake",
         abstract: "Battlesnake AI swift tool",
         subcommands: [Train.self, Execute.self],
         defaultSubcommand: Train.self)
