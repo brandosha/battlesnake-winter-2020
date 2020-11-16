@@ -8,7 +8,6 @@
 import Foundation
 import ArgumentParser
 
-
 struct MainApp: ParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "battlesnake",
