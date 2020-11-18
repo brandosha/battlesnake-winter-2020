@@ -13,7 +13,7 @@ struct MainApp: ParsableCommand {
         commandName: "battlesnake",
         abstract: "Battlesnake AI swift tool",
         subcommands: [Train.self, Execute.self],
-        defaultSubcommand: Train.self)
+        defaultSubcommand: Execute.self)
 }
 
 MainApp.main()

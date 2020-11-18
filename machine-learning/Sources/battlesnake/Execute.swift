@@ -42,12 +42,13 @@ struct Execute: ParsableCommand {
                 let brain = brains[snake.id]!
                 
                 let scoredMoves = brain.getScoredMoves()
+                // return scoredMoves.max { $1.score > $0.score }!.move
+                
                 let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
                 
                 if sorted.isEmpty { return .random() }
                 
-                let index = Int(pow(Double.random(in: 0..<1), 2) * Double(sorted.count))
-                return sorted[index].move
+                return sorted[0].move
             }
             
             usleep(100_000)

@@ -169,14 +169,52 @@ struct Brain {
         let weights: [Matrix]
         let biases: [Matrix]
         
-        func offspring(with variables: Variables) -> Variables {
+        static func random(_ board: Game.Board) -> Variables {
+            let inputSize = 2 + board.width * board.height * 5
+            let weights: [Matrix] = [
+                .random(rows: inputSize, cols: 16),
+                .random(rows: 16, cols: 16),
+                .random(rows: 16, cols: 4)
+            ]
+            let biases: [Matrix] = weights.prefix(weights.count - 1).map {
+                .random(rows: 1, cols: $0.dimensions.cols)
+            }
+            
+            return Variables(weights: weights, biases: biases)
+        }
+        
+        func mutated(_ mutationProbablitiy: Double = 0.01) -> Variables {
+            let newWeights = weights.map { weightMatrix in
+                weightMatrix.map { x in
+                    if mutationProbablitiy > .random(in: 0...1) {
+                        return .randomNormal()
+                    } else {
+                        return x
+                    }
+                }
+            }
+            
+            let newBiases = biases.map { biasMatrix in
+                biasMatrix.map { x in
+                    if mutationProbablitiy > .random(in: 0...1) {
+                        return .randomNormal()
+                    } else {
+                        return x
+                    }
+                }
+            }
+            
+            return Variables(weights: newWeights, biases: newBiases)
+        }
+        
+        func offspring(with variables: Variables, mutationProbablitiy: Double = 0.01) -> Variables {
             let newWeights = weights.enumerated().map { (index, weightMatrix) -> Matrix in
                 let otherWeights = variables.weights[index]
                 
                 return weightMatrix.map { val1, row, col in
                     let val2 = otherWeights[row, col]
                     
-                    if 0.1 > .random(in: 0...1) {
+                    if mutationProbablitiy > 0 && mutationProbablitiy > .random(in: 0...1) {
                         return .randomNormal()
                     }
                     
@@ -191,7 +229,7 @@ struct Brain {
                 return weightMatrix.map { val1, row, col in
                     let val2 = otherBiases[row, col]
                     
-                    if 0.1 > .random(in: 0...1) {
+                    if mutationProbablitiy > .random(in: 0...1) {
                         return .randomNormal()
                     }
                     
