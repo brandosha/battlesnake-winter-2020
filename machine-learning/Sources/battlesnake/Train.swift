@@ -13,10 +13,8 @@ struct TrainingData {
     
     static var savedBrainVariables = try? Brain.Variables.readFromFile()
     
-    static var population: [Train.GameResult] = []
-    
-    /*static var bestBrain: Train.GameResult?
-    static var newBest = false*/
+    static var population: [Train.AgentFitness] = []
+    static var gamesPerSnake: [Int] = []
 }
 
 struct Train: ParsableCommand {
@@ -30,104 +28,183 @@ struct Train: ParsableCommand {
     @Option(name: .shortAndLong)
     var outFile = "model_variables.dat"
     
+    @Flag(name: .shortAndLong)
+    var snapshots = false
+    
     func run() throws {
         print("Training...")
+        // testGeneticAlgorithm()
         try doTraining()
     }
     
-    func doTraining() throws {
-        // var prevGeneration: [GameResult] = []
+    func testGeneticAlgorithm() {
+        var allVariables: [Brain.Variables] = (1...100).map { _ in
+            let weights: [Matrix] = [
+                .random(rows: 2, cols: 3),
+                .random(rows: 3, cols: 1)
+            ]
+            let biases = weights.map { Matrix.random(rows: 1, cols: $0.dimensions.cols) }
+            
+            return Brain.Variables(weights: weights, biases: biases)
+        }
         
-        for gen in 1...iterations {
-            let population = generatePopulation()
-            
-            guard population.count.isMultiple(of: 4) else { fatalError("Population must be divisible by 4") }
-            
-            var gameBrains: [(index: Int, brain: Brain.Variables)] = []
-            for individual in 0..<population.count {
-                let agent = (individual, population[individual].brain)
-                gameBrains.append(agent)
+        var results: [(brain: Brain.Variables, fitness: Double)] = []
+        
+        for gen in 1...100 {
+            for variables in allVariables {
+                var totalFitness: Double = 0
                 
-                if gameBrains.count == 4 {
-                    var stepsPlayed = 0
+                for _ in 1...100 {
+                    let inputs: [Int] = [.random(in: 0...1), .random(in: 0...1)]
+                    let modelInputs: Matrix = [
+                        inputs.map { Double($0) }
+                    ]
                     
-                    var brains: [String: Brain] = [:]
-                    let snakes = gameBrains.map { (index, variables) -> Game.Snake in
-                        let snake = Game.Snake(in: TrainingData.board)
-                        snake.onDeath = {
-                            TrainingData.population[index].stepsSurvived = stepsPlayed
-                        }
-                        
-                        return snake
-                    }
-                    let game = Game(board: TrainingData.board, snakes: snakes)
+                    var output = modelInputs .* variables.weights[0] + variables.biases[0]
+                    output = output.map(relu)
+                    output = output .* variables.weights[1] + variables.biases[1]
+                    output = output.map(sigmoid)
                     
-                    for (index, (_, variables)) in gameBrains.enumerated() {
-                        let snake = snakes[index]
-                        brains[snake.id] = Brain(with: variables, for: snake, in: game)
-                    }
+                    let outResult = output[0, 0]
+                    let fitness = 1 - abs(Double(inputs[0] ^ inputs[1]) - outResult)
+                    totalFitness += fitness
                     
-                    while game.remainingSnakes > 0 {
-                        game.doMoves { snake, _ in
-                            guard let brain = brains[snake.id] else {
-                                fatalError("Missing brain")
-                            }
-                            
-                            let scoredMoves = brain.getScoredMoves()
-                            // return scoredMoves.max(by: { $1.score > $0.score })!.move
-                            
-                            let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
-                            
-                            if sorted.isEmpty { return .random() }
-                            
-                            return sorted[0].move
-                        }
-                        
-                        stepsPlayed += 1
-                    }
-                    
-                    gameBrains = []
+                    /*if 0.01 > .random(in: 0...1) {
+                        print("\(inputs[0]) XOR \(inputs[1]) = \(round(outResult * 100) / 100), actual: \(inputs[0] ^ inputs[1])")
+                    }*/
                 }
-                // let results = playThroughGame(prevGeneration)
-                // allResults += results
+                
+                results.append((variables, totalFitness))
             }
             
-            TrainingData.population.sort { $1.stepsSurvived < $0.stepsSurvived }
-            let generation = TrainingData.population
+            results.sort(by: { $1.fitness < $0.fitness })
             
-            let avg = generation.reduce(0, { $0 + $1.stepsSurvived })  / generation.count
-            let median = generation[generation.count / 2].stepsSurvived
+            print("Test generation \(gen) - best: \(results[0].fitness)")
             
-            print("Generation \(gen) - best: \(TrainingData.population[0...2].map(\.stepsSurvived)), avg: \(avg), median: \(median)")
-            
-            try TrainingData.population[0].brain.saveToFile(outFile)
-            
-            /*var allResults: [GameResult] = []
-            
-            for _ in 1...25 {
-                let results = playThroughGame(prevGeneration)
-                allResults += results
+            allVariables = (1...100).map { _ in
+                let parents = (1...2).map { _ -> Brain.Variables in
+                    var index = 0
+                    while index < results.count - 1 && 0.1 > .random(in: 0...1) {
+                        index += 1
+                    }
+                    
+                    return results[index].brain
+                }
+                
+                
+                return parents[0].offspring(with: parents[1])
             }
             
-            prevGeneration = allResults.sorted(by: { $1.stepsSurvived < $0.stepsSurvived })
-            let avg = prevGeneration.reduce(0, { $0 + $1.stepsSurvived / prevGeneration.count })
-            let median = prevGeneration[prevGeneration.count / 2].stepsSurvived
-            
-            print("Generation \(gen) - best: \(prevGeneration[0...2].map(\.stepsSurvived)), avg: \(avg), median: \(median)")
-            
-            if newBest {
-                print("new best: \(bestBrain!.stepsSurvived)")
-                newBest = false
-                try bestBrain!.brain.saveToFile()
-            } else if let bestBrain = bestBrain {
-                prevGeneration.insert(bestBrain, at: 0)
-            }*/
+            results = []
         }
     }
     
-    func generatePopulation() -> [GameResult] {
+    func doTraining() throws {
+        for gen in 1...iterations {
+            let population = generatePopulation()
+            
+            TrainingData.gamesPerSnake = [Int](repeating: 0, count: population.count)
+            
+            for individual in 0..<population.count {
+                setFitness(for: individual)
+                
+                // print(individual, TrainingData.gamesPerSnake)
+            }
+            
+            /*guard TrainingData.gamesPerSnake.allSatisfy({ $0 == TrainingData.gamesPerSnake[0] }) else {
+                print(TrainingData.gamesPerSnake)
+                fatalError("A snake did not play the same amount of games as the others")
+            }*/
+            
+            for index in TrainingData.population.indices {
+                let gamesPlayed = Double(TrainingData.gamesPerSnake[index])
+                TrainingData.population[index].fitness /= gamesPlayed
+            }
+            
+            TrainingData.population.sort { $1.fitness < $0.fitness }
+            let generation = TrainingData.population
+            
+            let avg = generation.reduce(0.0, { $0 + $1.fitness }) / Double(generation.count)
+            let median = generation[generation.count / 2].fitness
+            
+            if (snapshots) { print("\n\n----------") }
+            let bestStr = String(format: "%.2f", TrainingData.population[0].fitness)
+            let avgStr = String(format: "%.2f", avg)
+            let medianStr = String(format: "%.2f", median)
+            print("Generation \(gen) - best: \(bestStr), avg: \(avgStr), median: \(medianStr)")
+            if (snapshots) { print("----------\n\n") }
+            
+            try TrainingData.population[0].brain.saveToFile(outFile)
+        }
+    }
+    
+    typealias Agent = (snake: Game.Snake, index: Int)
+    func setFitness(for agentIndex: Int) {
+        let agentVariables = TrainingData.population[agentIndex].brain
+        
+        let remainingIndices = (agentIndex + 1)..<TrainingData.population.count
+        
+        var stepsPlayed = 0
+        var stepsSurvived: [String: Int] = [:]
+        var enemies: [Agent] = []
+        for index in remainingIndices {
+            let snake = Game.Snake(in: TrainingData.board)
+            snake.onDeath = { _ in stepsSurvived[snake.id] = stepsPlayed }
+            
+            enemies.append((snake, index))
+            
+            guard enemies.count == 3 else { continue }
+            let thisSnake = Game.Snake(in: TrainingData.board)
+            thisSnake.onDeath = { _ in stepsSurvived[thisSnake.id] = stepsPlayed }
+            
+            var snakes = [thisSnake]
+            var agents: [Agent] = [(thisSnake, agentIndex)]
+            for enemy in enemies {
+                snakes.append(enemy.snake)
+                agents.append(enemy)
+            }
+            
+            let game = Game(board: TrainingData.board, snakes: snakes)
+            
+            var brains: [String: Brain] = [thisSnake.id: Brain(with: agentVariables, for: thisSnake, in: game)]
+            for enemy in enemies {
+                let enemyVariables = TrainingData.population[enemy.index].brain
+                brains[enemy.snake.id] = Brain(with: enemyVariables, for: enemy.snake, in: game)
+            }
+            
+            while game.remainingSnakes > 1 {
+                game.doMoves { snake, _ in
+                    guard let brain = brains[snake.id] else { fatalError("Missing brain") }
+                    
+                    let scored = brain.getScoredMoves()
+                    // return scored.max(by: { $1.score > $0.score })!.move
+                    
+                    let sorted = Brain.filterAndSortMoves(scored, for: snake, in: game)
+                    return sorted.first?.move ?? .random()
+                }
+                
+                stepsPlayed += 1
+            }
+            
+            for agent in agents {
+                let fitness = stepsSurvived[agent.snake.id] ?? stepsPlayed
+                /*fitness *= snake.kills + 1
+                if snake.isAlive { fitness *= 4 }
+                fitness += agent.snake.length*/
+                
+                TrainingData.gamesPerSnake[agent.index] += 1
+                TrainingData.population[agent.index].fitness += Double(fitness)
+            }
+            
+            stepsPlayed = 0
+            stepsSurvived = [:]
+            enemies = []
+        }
+    }
+    
+    func generatePopulation() -> [AgentFitness] {
         let prevPopulation = TrainingData.population
-        var newPopulation: [Train.GameResult] = []
+        var newPopulation: [Train.AgentFitness] = []
         
         if prevPopulation.isEmpty {
             if let savedBrain = TrainingData.savedBrainVariables {
@@ -158,19 +235,21 @@ struct Train: ParsableCommand {
             let offspringCount = 8 * tenth
             let newCount = tenth
             
-            newPopulation += prevPopulation.prefix(provenCount) // Keep the top performers
+            newPopulation += prevPopulation.prefix(provenCount).map {
+                ($0.brain, 0)
+            } // Keep the top performers resetting fitness
             
-            let scoreSum = prevPopulation.reduce(0, { $0 + $1.stepsSurvived })
+            let scoreSum = prevPopulation.reduce(0, { $0 + $1.fitness })
             
             for _ in 1...offspringCount {
                 let parents = (1...2).map { _ -> Brain.Variables in
-                    let random = Int.random(in: 1...scoreSum)
+                    let random = Double.random(in: 1...scoreSum)
                     
-                    var probSum = 0
+                    var probSum = 0.0
                     var index = -1
                     while probSum < random {
                         index += 1
-                        probSum += prevPopulation[index].stepsSurvived
+                        probSum += prevPopulation[index].fitness
                     }
                     
                     return prevPopulation[index].brain
@@ -189,78 +268,5 @@ struct Train: ParsableCommand {
         return TrainingData.population
     }
     
-    typealias GameResult = (brain: Brain.Variables, stepsSurvived: Int)
-    /*func playThroughGame(_ prevGeneration: [GameResult] = []) -> [GameResult] {
-        var deadBrains: [GameResult] = []
-        var stepsPlayed = 0
-        
-        let board = Game.Board(width: 11, height: 11)
-        let snakes = (1...4).map { _ in Game.Snake(in: board) }
-        let game = Game(board: board, snakes: snakes)
-        
-        var brains: [String: Brain] = [:]
-        for snake in snakes {
-            guard brains[snake.id] == nil else { return [] }
-            
-            let variables: Brain.Variables // Keeping this separate to prevent data leak in onDeath closure
-            let brain: Brain
-            if prevGeneration.isEmpty {
-                brain = Brain(for: snake, in: game)
-                variables = brain.variables
-            } else {
-                let parents = (1...2).map { _ -> GameResult in
-                    let maxIndex = prevGeneration.count - 1
-                    var index = 0
-                    while index < maxIndex && 0.2 < .random(in: 0...1) {
-                        index += 1
-                    }
-                    // let index = Int(Double(prevGeneration.count) * pow(Double.random(in: 0..<1), 4))
-                    return prevGeneration[index]
-                }
-                
-                /*let best = Double(prevGeneration[0].stepsSurvived)
-                let norm = parents.map { Double($0.stepsSurvived) / best }
-                let prob = 1 - norm[0] * norm[1]*/
-                variables = parents[0].brain.offspring(
-                    with: parents[1].brain,
-                    mutationProbablitiy: 0.01)
-                brain = Brain(with: variables, for: snake, in: game)
-            }
-            
-            brains[snake.id] = brain
-            snake.onDeath = {
-                let result = (variables, stepsPlayed)
-                deadBrains.append(result)
-                
-                if let best = bestBrain?.stepsSurvived, stepsPlayed <= best {
-                    return
-                } else {
-                    bestBrain = result
-                    newBest = true
-                }
-            }
-        }
-        
-        while game.remainingSnakes > 0 {
-            game.doMoves { snake, _ in
-                guard let brain = brains[snake.id] else { fatalError("Missing brain") }
-                
-                let scoredMoves = brain.getScoredMoves()
-                return scoredMoves.max(by: { $1.score > $0.score })!.move
-                
-                /*
-                let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
-                
-                guard !sorted.isEmpty else { return .random() }
-                
-                let index = 0 // Int(pow(Double.random(in: 0..<1), 2) * Double(sorted.count))
-                return sorted[index].move
-                */
-            }
-            
-            stepsPlayed += 1
-        }
-        
-        return deadBrains
-    }*/
+    typealias AgentFitness = (brain: Brain.Variables, fitness: Double)
 }

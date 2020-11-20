@@ -35,7 +35,7 @@ struct Matrix: ExpressibleByArrayLiteral {
         self.dimensions = (rows, cols)
     }
     
-    private init (values: [[Double]], rows: Int, cols: Int) {
+    private init (_ values: [[Double]], rows: Int, cols: Int) {
         self.values = values
         self.dimensions = (rows, cols)
     }
@@ -47,7 +47,7 @@ struct Matrix: ExpressibleByArrayLiteral {
             }
         }
         
-        return Matrix(values)
+        return Matrix(values, rows: rows, cols: cols)
     }
     
     static func random(_ dimensions: Dimensions) -> Matrix {
@@ -218,8 +218,11 @@ struct Brain {
                         return .randomNormal()
                     }
                     
-                    if (Bool.random()) { return val2 }
-                    else { return val1 }
+                    let newValRange = val2 > val1 ? val1...val2 : val2...val1
+                    return .random(in: newValRange)
+                    
+                    /*if (Bool.random()) { return val2 }
+                    else { return val1 }*/
                 }
             }
             
@@ -398,5 +401,26 @@ struct Brain {
         }
         
         return filtered.sorted(by: { $1.score > $0.score })
+    }
+    
+    static func okMoves(for snake: Game.Snake, in game: Game) -> [Game.Board.Direction] {
+        let filtered = Game.Board.Direction.allCases.filter { move in
+            let newPos = move.appliedTo(snake.head)
+            
+            if (
+                !(0...game.board.width - 1 ~= newPos.x) ||
+                !(0...game.board.height - 1 ~= newPos.y)
+            ) { return false }
+            
+            switch game.boardEntities[newPos]?.first {
+            case .body(let otherSnake) where otherSnake.isAlive:
+                return false
+            case .head(let otherSnake) where otherSnake.isAlive && otherSnake !== snake:
+                return false
+            default: return true
+            }
+        }
+        
+        return filtered
     }
 }

@@ -55,13 +55,30 @@ class Game {
     class Snake {
         fileprivate(set) var head: Board.Positon
         fileprivate(set) var body: [Board.Positon]
-        fileprivate(set) var isAlive: Bool = true {
+        fileprivate(set) var isAlive: Bool = true /*{
             didSet {
                 if !isAlive { onDeath?() }
             }
+        }*/
+        
+        private(set) var kills = 0
+        
+        enum Death {
+            case collidedWithSelf,
+                 collidedWithWall,
+                 collidedWithEnemy(Snake),
+                 ranOutOfHealth
         }
         
-        var onDeath: (() -> ())?
+        fileprivate(set) var death: Death? {
+            didSet {
+                guard let death = death else { return }
+                if case .collidedWithEnemy(let enemy) = death { enemy.kills += 1 }
+                onDeath?(death)
+            }
+        }
+        
+        var onDeath: ((Death) -> ())?
         
         static let maxHealth = 100
         fileprivate(set) var health: Int = Snake.maxHealth
@@ -134,12 +151,16 @@ class Game {
             
             snake.health -= 1
             
-            if (
-                snake.health <= 0 ||
+            if snake.health <= 0 {
+                snake.isAlive = false
+                snake.death = .ranOutOfHealth
+                remainingSnakes -= 1
+            } else if (
                 !(0...self.board.width - 1 ~= snake.head.x) ||
                 !(0...self.board.height - 1 ~= snake.head.y)
             ) {
                 snake.isAlive = false
+                snake.death = .collidedWithWall
                 remainingSnakes -= 1
             } else if food.contains(snake.head) {
                 food.remove(snake.head)
@@ -197,7 +218,8 @@ class Game {
         switch (a, b) {
         case (.head(let snakeA), .head(let snakeB)),
              (.body(let snakeA), .head(let snakeB)),
-             (.head(let snakeA), .body(let snakeB)):
+             (.head(let snakeA), .body(let snakeB)),
+             (.body(let snakeA), .body(let snakeB)):
             if !snakeA.isAlive || !snakeB.isAlive { return }
         default:
             break
@@ -207,17 +229,23 @@ class Game {
         case (.head(let snakeA), .head(let snakeB)):
             if snakeA.length >= snakeB.length {
                 snakeB.isAlive = false
+                snakeB.death = .collidedWithEnemy(snakeA)
                 hideDeadSnake(snakeB)
             } else {
                 snakeA.isAlive = false
+                snakeA.death = .collidedWithEnemy(snakeB)
                 hideDeadSnake(snakeA)
             }
-        case (.head(let snake), .body):
-            snake.isAlive = false
-            hideDeadSnake(snake)
-        case (.body, .head(let snake)):
-            snake.isAlive = false
-            hideDeadSnake(snake)
+        case (.head(let headSnake), .body(let bodySnake)),
+             (.body(let bodySnake), .head(let headSnake)):
+            headSnake.isAlive = false
+            if headSnake === bodySnake {
+                headSnake.death = .collidedWithSelf
+            } else {
+                headSnake.death = .collidedWithEnemy(bodySnake)
+            }
+            
+            hideDeadSnake(headSnake)
         default:
             break
         }
