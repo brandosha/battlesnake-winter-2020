@@ -27,10 +27,10 @@ struct Execute: ParsableCommand {
         }
         
         let board = Game.Board(width: 11, height: 11)
-        let snakes = (1...4).map { _ in Game.Snake(in: board) }
+        let snakes = (1...1).map { _ in Game.Snake(in: board) }
         let game = Game(board: board, snakes: snakes)
         
-        let randomId: String = snakes[0].id
+        let randomId: String = ""// snakes[0].id
         var brains: [String: Brain] = [:]
         for snake in snakes {
             brains[snake.id] = Brain(with: brainVariables, for: snake, in: game)
@@ -38,28 +38,27 @@ struct Execute: ParsableCommand {
         
         var totalSteps = 0
         
-        while game.remainingSnakes > 1 {
+        while game.remainingSnakes > 0 {
             game.doMoves { snake, _ in
                 if snake.id == randomId { // Random snake to compare with trained
-                    let scoredMoves = Game.Board.Direction.allCases.map { move -> Brain.ScoredMove in
-                        return (move, .random(in: 0...1))
-                    }
-                    
-                    // return scoredMoves.max(by: { $1.score > $0.score })!.move
-                    
-                    let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
-                    
-                    if sorted.isEmpty { return .random() }
-                    return sorted[0].move
+                    let okMoves = Brain.okMoves(for: snake, in: game)
+                    return okMoves.randomElement() ?? .random()
                 }
                 
                 let brain = brains[snake.id]!
                 
                 let scoredMoves = brain.getScoredMoves()
-                // return scoredMoves.max { $1.score > $0.score }!.move
+                var scoredMovesText: [String] = []
+                for scored in scoredMoves {
+                    let rounded = round(scored.score * 1000) / 1000
+                    scoredMovesText.append("\(scored.move): \(rounded)")
+                }
                 
-                let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
-                return sorted.first?.move ?? .random()
+                print(snake.bodyString + " " + snake.headString, scoredMovesText.joined(separator: ", "))
+                return scoredMoves.max { $1.score > $0.score }!.move
+                
+                /*let sorted = Brain.filterAndSortMoves(scoredMoves, for: snake, in: game)
+                return sorted.first?.move ?? .random()*/
             }
             
             usleep(100_000)

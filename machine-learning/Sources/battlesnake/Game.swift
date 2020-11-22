@@ -55,11 +55,8 @@ class Game {
     class Snake {
         fileprivate(set) var head: Board.Positon
         fileprivate(set) var body: [Board.Positon]
-        fileprivate(set) var isAlive: Bool = true /*{
-            didSet {
-                if !isAlive { onDeath?() }
-            }
-        }*/
+        fileprivate(set) var isAlive: Bool = true
+        fileprivate(set) var stepsSurvived: Int = 0
         
         private(set) var kills = 0
         
@@ -150,6 +147,7 @@ class Game {
             snake.move(move)
             
             snake.health -= 1
+            snake.stepsSurvived += 1
             
             if snake.health <= 0 {
                 snake.isAlive = false

@@ -11,10 +11,10 @@ import ArgumentParser
 struct TrainingData {
     static let board = Game.Board(width: 11, height: 11)
     
-    static var savedBrainVariables = try? Brain.Variables.readFromFile()
+    // static var savedBrainVariables = try? Brain.Variables.readFromFile()
     
     static var population: [Train.AgentFitness] = []
-    static var gamesPerSnake: [Int] = []
+    // static var gamesPerSnake: [Int] = []
 }
 
 struct Train: ParsableCommand {
@@ -26,7 +26,7 @@ struct Train: ParsableCommand {
     var population = 100
     
     @Option(name: .shortAndLong)
-    var outFile = "model_variables.dat"
+    var file = "model_variables.dat"
     
     @Flag(name: .shortAndLong)
     var snapshots = false
@@ -101,9 +101,13 @@ struct Train: ParsableCommand {
     
     func doTraining() throws {
         for gen in 1...iterations {
-            let population = generatePopulation()
+            generatePopulation()
             
-            TrainingData.gamesPerSnake = [Int](repeating: 0, count: population.count)
+            for _ in 1...100 {
+                playRound(agentsPerGame: 1)
+            }
+            
+            /*TrainingData.gamesPerSnake = [Int](repeating: 0, count: population.count)
             
             for individual in 0..<population.count {
                 setFitness(for: individual)
@@ -119,7 +123,7 @@ struct Train: ParsableCommand {
             for index in TrainingData.population.indices {
                 let gamesPlayed = Double(TrainingData.gamesPerSnake[index])
                 TrainingData.population[index].fitness /= gamesPlayed
-            }
+            }*/
             
             TrainingData.population.sort { $1.fitness < $0.fitness }
             let generation = TrainingData.population
@@ -134,12 +138,12 @@ struct Train: ParsableCommand {
             print("Generation \(gen) - best: \(bestStr), avg: \(avgStr), median: \(medianStr)")
             if (snapshots) { print("----------\n\n") }
             
-            try TrainingData.population[0].brain.saveToFile(outFile)
+            try TrainingData.population[0].brain.saveToFile(file)
         }
     }
     
     typealias Agent = (snake: Game.Snake, index: Int)
-    func setFitness(for agentIndex: Int) {
+    /*func setFitness(for agentIndex: Int) {
         let agentVariables = TrainingData.population[agentIndex].brain
         
         let remainingIndices = (agentIndex + 1)..<TrainingData.population.count
@@ -177,10 +181,10 @@ struct Train: ParsableCommand {
                     guard let brain = brains[snake.id] else { fatalError("Missing brain") }
                     
                     let scored = brain.getScoredMoves()
-                    // return scored.max(by: { $1.score > $0.score })!.move
+                    return scored.max(by: { $1.score > $0.score })!.move
                     
-                    let sorted = Brain.filterAndSortMoves(scored, for: snake, in: game)
-                    return sorted.first?.move ?? .random()
+                    /*let sorted = Brain.filterAndSortMoves(scored, for: snake, in: game)
+                    return sorted.first?.move ?? .random()*/
                 }
                 
                 stepsPlayed += 1
@@ -200,14 +204,53 @@ struct Train: ParsableCommand {
             stepsSurvived = [:]
             enemies = []
         }
+    }*/
+    
+    func playRound(agentsPerGame: Int = 4) {
+        var agentIndices = TrainingData.population.indices.shuffled()
+        
+        while agentIndices.count >= agentsPerGame {
+            var snakes: [Game.Snake] = []
+            var agents: [Agent] = []
+            for index in agentIndices[0..<agentsPerGame] {
+                let snake = Game.Snake(in: TrainingData.board)
+                snakes.append(snake)
+                agents.append((snake, index))
+            }
+            
+            let game = Game(board: TrainingData.board, snakes: snakes)
+            
+            var brains: [String: Brain] = [:]
+            for agent in agents {
+                let snake = agent.snake
+                let variables = TrainingData.population[agent.index].brain
+                brains[agent.snake.id] = Brain(with: variables, for: snake, in: game)
+            }
+            
+            while game.remainingSnakes > 0 {
+                game.doMoves { snake, _ in
+                    guard let brain = brains[snake.id] else { fatalError("missing snake") }
+                    
+                    let scored = brain.getScoredMoves()
+                    return scored.max(by: { $1.score > $0.score })!.move
+                }
+            }
+            
+            for agent in agents {
+                let fitness = Double(agent.snake.stepsSurvived)
+                TrainingData.population[agent.index].fitness += fitness
+            }
+            
+            agentIndices.removeFirst(agentsPerGame)
+        }
     }
     
-    func generatePopulation() -> [AgentFitness] {
+    func generatePopulation() {
         let prevPopulation = TrainingData.population
         var newPopulation: [Train.AgentFitness] = []
         
         if prevPopulation.isEmpty {
-            if let savedBrain = TrainingData.savedBrainVariables {
+            if let savedBrain = try? Brain.Variables.readFromFile(file) {
                 let tenth = population / 10
                 
                 let provenCount = tenth
@@ -265,7 +308,7 @@ struct Train: ParsableCommand {
         }
         
         TrainingData.population = newPopulation.shuffled()
-        return TrainingData.population
+        // return TrainingData.population
     }
     
     typealias AgentFitness = (brain: Brain.Variables, fitness: Double)

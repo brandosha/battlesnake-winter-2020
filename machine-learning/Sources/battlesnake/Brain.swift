@@ -123,7 +123,9 @@ struct Matrix: ExpressibleByArrayLiteral {
 
 infix operator .* : MultiplicationPrecedence
 func .* (lhs: Matrix, rhs: Matrix) -> Matrix {
-    guard (lhs.dimensions.cols == rhs.dimensions.rows) else { fatalError("Incompatible matrix dimensions") }
+    guard (lhs.dimensions.cols == rhs.dimensions.rows) else {
+        fatalError("Incompatable matrix dimensions for multiplication: \(lhs.dimensions) and \(rhs.dimensions)")
+    }
     
     let outDim: Matrix.Dimensions = (lhs.dimensions.rows, rhs.dimensions.cols)
     
@@ -145,7 +147,9 @@ func .* (lhs: Matrix, rhs: Matrix) -> Matrix {
 }
 
 func + (lhs: Matrix, rhs: Matrix) -> Matrix {
-    guard lhs.dimensions == rhs.dimensions else { fatalError("Incompatable matrix dimensions") }
+    guard lhs.dimensions == rhs.dimensions else {
+        fatalError("Incompatable matrix dimensions for addition: \(lhs.dimensions) and \(rhs.dimensions)")
+    }
     
     return lhs.map { val, row, col in val + rhs[row, col] }
 }
@@ -170,7 +174,7 @@ struct Brain {
         let biases: [Matrix]
         
         static func random(_ board: Game.Board) -> Variables {
-            let inputSize = 2 + board.width * board.height * 5
+            let inputSize = 2 + Brain.visionArea * 5
             let weights: [Matrix] = [
                 .random(rows: inputSize, cols: 16),
                 .random(rows: 16, cols: 16),
@@ -312,48 +316,63 @@ struct Brain {
         self.snake = snake
         self.game = game
         
-        let inputSize = 2 + game.board.width * game.board.height * 5
-        self.weights = [
-            .random(rows: inputSize, cols: 16),
-            .random(rows: 16, cols: 16),
-            .random(rows: 16, cols: 4)
-        ]
-        self.biases = weights.prefix(weights.count - 1).map {
-            .random(rows: 1, cols: $0.dimensions.cols)
-        }
+        let variables = Variables.random(game.board)
+        self.weights = variables.weights
+        self.biases = variables.biases
     }
+    
+    static let visionRadius = 8
+    static let visionArea = (1...visionRadius).reduce(0, { $0 + 4 * ($1 + 1) })
     
     private func getInput() -> [Double] {
         var input: [Double] = []
-        let boardInputCount = game.board.width * game.board.height * 5
+        let boardInputCount = Brain.visionArea * 5
         input.reserveCapacity(2 + boardInputCount)
-        input += [Double(snake.health), Double(snake.length)]
+        input += [Double(snake.health / 100), Double(snake.length)]
         
-        for row in 0...game.board.height - 1 {
-            for col in 0...game.board.width - 1 {
-                // One-hot for [your head, your body, enemy head, enemy body, food]
-                var inputValues: [Double] = [0, 0, 0, 0, 0]
+        for stepsAway in 1...Brain.visionRadius {
+            for stepsUp in 0...stepsAway {
+                let stepsRight = stepsAway - stepsUp
                 
-                let pos = Game.Board.Positon(x: col, y: row)
-                guard let entity = game.boardEntities[pos]?.first else {
-                    input += inputValues
-                    continue
+                for vertMult in [-1, 1] {
+                    for horizMult in [-1, 1] {
+                        let vertSteps = vertMult * stepsUp
+                        let horizSteps = horizMult * stepsRight
+                        
+                        // One-hot for [your body, enemy body, enemy head, food, off map]
+                        var inputValues: [Double] = [0, 0, 0, 0, 0]
+                        
+                        let pos = Game.Board.Positon(
+                            x: snake.head.x + horizSteps,
+                            y: snake.head.y + vertSteps)
+                        
+                        guard 0..<game.board.width ~= pos.x && 0..<game.board.height ~= pos.y else {
+                            inputValues[4] = 1
+                            input += inputValues
+                            continue
+                        }
+                        
+                        guard let entity = game.boardEntities[pos]?.first else {
+                            input += inputValues
+                            continue
+                        }
+                        
+                        switch entity {
+                        case .head(let otherSnake) where otherSnake.isAlive:
+                            if otherSnake === snake { fatalError("Something strange is happening") }
+                            else { inputValues[2] = 1 }
+                        case .body(let otherSnake) where otherSnake.isAlive:
+                            if otherSnake === snake { inputValues[0] = 1 }
+                            else { inputValues[1] = 1 }
+                        case .food:
+                            inputValues[3] = 1
+                        default:
+                            break
+                        }
+                        
+                        input += inputValues
+                    }
                 }
-                
-                switch entity {
-                case .head(let otherSnake):
-                    if otherSnake === snake { inputValues[0] = 1 }
-                    else { inputValues[2] = 1 }
-                case .body(let otherSnake):
-                    if otherSnake === snake { inputValues[1] = 1 }
-                    else { inputValues[3] = 1 }
-                case .food:
-                    inputValues[4] = 1
-                default:
-                    break
-                }
-                
-                input += inputValues
             }
         }
         
@@ -400,7 +419,7 @@ struct Brain {
             }
         }
         
-        return filtered.sorted(by: { $1.score > $0.score })
+        return filtered.sorted(by: { $1.score < $0.score })
     }
     
     static func okMoves(for snake: Game.Snake, in game: Game) -> [Game.Board.Direction] {
